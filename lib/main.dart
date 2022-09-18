@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -33,8 +34,8 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController text1 = TextEditingController();
   TextEditingController text2 = TextEditingController();
   String movie = "Huckleberry";
+  final socketResponse = StreamController<Movie>();
   String descrip = "Cuộc phiêu lưu huckle";
-  late Movie movieModel;
   IO.Socket socket = IO.io(
     "http://192.168.1.142:3000",
     IO.OptionBuilder().setTransports(['websocket']) // for Flutter or Dart VM
@@ -61,12 +62,9 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     socket.on(
       "fromServer",
-      (data) => {
-        movieModel = Movie.fromMap(data),
-        setState(() {
-          movie = movieModel.movie;
-          descrip = movieModel.description;
-        }),
+      (data) {
+        final mov = Movie.fromMap(data);
+        socketResponse.sink.add(mov);
       },
     );
   }
@@ -116,8 +114,27 @@ class _MyHomePageState extends State<MyHomePage> {
           const SizedBox(
             height: 100,
           ),
-          Text(movie),
-          Text(descrip),
+          StreamBuilder<Movie>(
+            stream: socketResponse.stream,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final mov = snapshot.data;
+                return Column(
+                  children: [
+                    Text(mov?.movie ?? ""),
+                    Text(mov?.description ?? ""),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    Text(movie),
+                    Text(descrip),
+                  ],
+                );
+              }
+            },
+          ),
           const SizedBox(
             height: 100,
           ),
